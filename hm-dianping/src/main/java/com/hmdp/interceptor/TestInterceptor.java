@@ -1,6 +1,8 @@
 package com.hmdp.interceptor;
 
 
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hmdp.dto.UserDTO;
 import com.hmdp.utils.UserHolder;
@@ -18,7 +20,6 @@ import static com.hmdp.utils.RedisConstants.LOGIN_USER_TTL;
 @Slf4j
 public class LoginInterceptor implements HandlerInterceptor {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
 
     private StringRedisTemplate stringRedisTemplate;
 
@@ -31,10 +32,13 @@ public class LoginInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         // 1.获取请求头中的token
         String token = request.getHeader("authorization");
-        // 2.基于token获取redis中的用户json字符串，并转为userDTO对象
+        if (StrUtil.isBlank(token)) {
+            return true;
+        }
+        // 2.基于token获取redis中的用户
         String tokenKey = LOGIN_USER_KEY + token;
         String json = stringRedisTemplate.opsForValue().get(tokenKey);
-        UserDTO userDTO = mapper.readValue(json, UserDTO.class);
+        UserDTO userDTO = JSONUtil.toBean(json,UserDTO.class);
         if(userDTO == null){
             //3.不存在，拦截,返回401状态码
             response.setStatus(401);
